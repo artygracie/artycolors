@@ -1,0 +1,527 @@
+"use strict";
+// ArtyColors - Figma Plugin for Color Relationship Management
+// Main thread code with access to Figma API and document
+// Message types for UI communication
+var MessageType;
+(function (MessageType) {
+    MessageType["ANALYZE_SELECTION"] = "analyze-selection";
+    MessageType["UPDATE_ROLE"] = "update-role";
+    MessageType["CREATE_TEMPLATE"] = "create-template";
+    MessageType["APPLY_TEMPLATE"] = "apply-template";
+    MessageType["BATCH_GENERATE"] = "batch-generate";
+    MessageType["UPDATE_VARIANTS"] = "update-variants";
+    MessageType["GET_TEMPLATES"] = "get-templates";
+})(MessageType || (MessageType = {}));
+// =============================================================================
+// UTILITY FUNCTIONS
+// =============================================================================
+/**
+ * Natural sort that handles numbers correctly
+ * "Rectangle 2" comes before "Rectangle 11"
+ */
+function naturalSort(a, b) {
+    const regex = /(\d+)/g;
+    // Split strings into parts (text and numbers)
+    const aParts = a.split(regex);
+    const bParts = b.split(regex);
+    const maxLength = Math.max(aParts.length, bParts.length);
+    for (let i = 0; i < maxLength; i++) {
+        const aPart = aParts[i] || '';
+        const bPart = bParts[i] || '';
+        // Check if both parts are numbers
+        const aNum = parseInt(aPart, 10);
+        const bNum = parseInt(bPart, 10);
+        if (!isNaN(aNum) && !isNaN(bNum)) {
+            // Compare as numbers
+            if (aNum !== bNum) {
+                return aNum - bNum;
+            }
+        }
+        else {
+            // Compare as strings
+            const comparison = aPart.localeCompare(bPart);
+            if (comparison !== 0) {
+                return comparison;
+            }
+        }
+    }
+    return 0;
+}
+// =============================================================================
+// OKLCH COLOR CONVERSION UTILITIES
+// =============================================================================
+/**
+ * Convert hex color to OKLCH color space
+ * Uses accurate sRGB -> Linear RGB -> OKLab -> OKLCH conversion
+ */
+function hexToOKLCH(hex) {
+    // Remove # if present
+    hex = hex.replace('#', '');
+    // Parse RGB values
+    const r = parseInt(hex.substr(0, 2), 16) / 255;
+    const g = parseInt(hex.substr(2, 2), 16) / 255;
+    const b = parseInt(hex.substr(4, 2), 16) / 255;
+    // sRGB to Linear RGB
+    const toLinear = (c) => c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    const lr = toLinear(r);
+    const lg = toLinear(g);
+    const lb = toLinear(b);
+    // Linear RGB to OKLab
+    const l = 0.4122214708 * lr + 0.5363325363 * lg + 0.0514459929 * lb;
+    const m = 0.2119034982 * lr + 0.6806995451 * lg + 0.1073969566 * lb;
+    const s = 0.0883024619 * lr + 0.2817188376 * lg + 0.6299787005 * lb;
+    const l_ = Math.cbrt(l);
+    const m_ = Math.cbrt(m);
+    const s_ = Math.cbrt(s);
+    const L = 0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_;
+    const a = 1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_;
+    const b_ = 0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_;
+    // OKLab to OKLCH
+    const C = Math.sqrt(a * a + b_ * b_);
+    let H = Math.atan2(b_, a) * 180 / Math.PI;
+    if (H < 0)
+        H += 360;
+    return { L: Math.max(0, Math.min(1, L)), C: Math.max(0, C), H };
+}
+/**
+ * Convert OKLCH to hex color with gamut clamping
+ */
+function oklchToHex(oklch) {
+    const { L, C, H } = oklch;
+    // OKLCH to OKLab
+    const hRad = H * Math.PI / 180;
+    const a = C * Math.cos(hRad);
+    const b_oklab = C * Math.sin(hRad);
+    // OKLab to Linear RGB
+    const l_ = L + 0.3963377774 * a + 0.2158037573 * b_oklab;
+    const m_ = L - 0.1055613458 * a - 0.0638541728 * b_oklab;
+    const s_ = L - 0.0894841775 * a - 1.2914855480 * b_oklab;
+    const l = l_ * l_ * l_;
+    const m = m_ * m_ * m_;
+    const s = s_ * s_ * s_;
+    let lr = +4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s;
+    let lg = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s;
+    let lb = -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s;
+    // Gamut clamp in linear RGB
+    lr = Math.max(0, Math.min(1, lr));
+    lg = Math.max(0, Math.min(1, lg));
+    lb = Math.max(0, Math.min(1, lb));
+    // Linear RGB to sRGB
+    const fromLinear = (c) => c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
+    const r = fromLinear(lr);
+    const g = fromLinear(lg);
+    const b_srgb = fromLinear(lb);
+    // Convert to hex
+    const toHex = (c) => Math.round(Math.max(0, Math.min(255, c * 255))).toString(16).padStart(2, '0');
+    return `#${toHex(r)}${toHex(g)}${toHex(b_srgb)}`;
+}
+/**
+ * Additional gamut clamping for edge cases
+ */
+function gamutClamp(oklch) {
+    // Simple chroma clamping - can be enhanced with more sophisticated algorithms
+    const maxChroma = oklch.L * (1 - oklch.L) * 0.4; // Rough estimate
+    return Object.assign(Object.assign({}, oklch), { C: Math.min(oklch.C, maxChroma) });
+}
+// =============================================================================
+// RELATIVE COLOR RULE FUNCTIONS
+// =============================================================================
+/**
+ * Compute relative rule between base color and role color
+ */
+function computeRelativeRule(baseColor, roleColor) {
+    const baseOKLCH = hexToOKLCH(baseColor);
+    const roleOKLCH = hexToOKLCH(roleColor);
+    // Lightness relationship
+    const deltaL = roleOKLCH.L - baseOKLCH.L;
+    const Lmode = deltaL >= 0 ? 'lighten' : 'darken';
+    const k = Math.abs(deltaL);
+    // Chroma relationship
+    const Cmul = baseOKLCH.C > 0.01 ? roleOKLCH.C / baseOKLCH.C : 1;
+    const Cabs = baseOKLCH.C <= 0.01 ? roleOKLCH.C : null;
+    // Hue relationship
+    let hDelta = roleOKLCH.H - baseOKLCH.H;
+    if (hDelta > 180)
+        hDelta -= 360;
+    if (hDelta < -180)
+        hDelta += 360;
+    return { Lmode, k, Cmul, Cabs, hDelta };
+}
+/**
+ * Apply relative rule to a new base color
+ */
+function applyRule(rule, newBaseColor) {
+    const baseOKLCH = hexToOKLCH(newBaseColor);
+    // Apply lightness transformation
+    let newL = baseOKLCH.L;
+    if (rule.Lmode === 'lighten') {
+        newL = Math.min(1, baseOKLCH.L + rule.k);
+    }
+    else {
+        newL = Math.max(0, baseOKLCH.L - rule.k);
+    }
+    // Apply chroma transformation
+    let newC = rule.Cabs !== null ? rule.Cabs : baseOKLCH.C * rule.Cmul;
+    // Apply hue transformation
+    let newH = (baseOKLCH.H + rule.hDelta) % 360;
+    if (newH < 0)
+        newH += 360;
+    const newOKLCH = gamutClamp({ L: newL, C: newC, H: newH });
+    return oklchToHex(newOKLCH);
+}
+// =============================================================================
+// ROLE MANAGEMENT FUNCTIONS
+// =============================================================================
+/**
+ * Mark a node with a color role
+ */
+function markRole(node, role) {
+    node.setPluginData('colorRole', role);
+}
+/**
+ * Get the color role of a node
+ */
+function getRole(node) {
+    const role = node.getPluginData('colorRole');
+    return role || null;
+}
+/**
+ * Infer role from layer name patterns like [Base], [A], [B], [C]
+ */
+function inferRoleFromName(name) {
+    const patterns = [
+        { regex: /\[Base\]/i, role: 'Base' },
+        { regex: /\[Color1\]/i, role: 'Color1' },
+        { regex: /\[Color2\]/i, role: 'Color2' },
+        { regex: /\[Color3\]/i, role: 'Color3' },
+        { regex: /\[Color4\]/i, role: 'Color4' },
+        { regex: /\[Color5\]/i, role: 'Color5' },
+        // Legacy support
+        { regex: /\[A\]/i, role: 'Color1' },
+        { regex: /\[B\]/i, role: 'Color2' },
+        { regex: /\[C\]/i, role: 'Color3' }
+    ];
+    for (const pattern of patterns) {
+        if (pattern.regex.test(name)) {
+            return pattern.role;
+        }
+    }
+    return null;
+}
+/**
+ * Index all nodes by their color roles within a root node
+ */
+function indexRoles(root) {
+    const roleIndex = {};
+    const traverse = (node) => {
+        // Check explicit role assignment first
+        let role = getRole(node);
+        // Fallback to name-based detection
+        if (!role) {
+            role = inferRoleFromName(node.name);
+            if (role) {
+                markRole(node, role); // Save inferred role
+            }
+        }
+        // Add to index if role found and node has fills
+        if (role && 'fills' in node) {
+            if (!roleIndex[role]) {
+                roleIndex[role] = [];
+            }
+            roleIndex[role].push(node);
+        }
+        // Recursively traverse children
+        if ('children' in node) {
+            for (const child of node.children) {
+                traverse(child);
+            }
+        }
+    };
+    traverse(root);
+    return roleIndex;
+}
+// =============================================================================
+// COLOR ANALYSIS FUNCTIONS
+// =============================================================================
+/**
+ * Analyze a node and extract all colors with smart role assignment
+ */
+function analyzeNodeColors(root) {
+    const layerColors = [];
+    const colorFrequency = new Map();
+    const allColorNodes = [];
+    // First pass: collect all colors and count frequency
+    const traverse = (node) => {
+        if ('fills' in node && node.fills && Array.isArray(node.fills) && node.fills.length > 0) {
+            const fill = node.fills[0];
+            if (fill && fill.type === 'SOLID') {
+                const hexColor = rgbToHex(fill.color);
+                allColorNodes.push({ node, color: hexColor });
+                colorFrequency.set(hexColor, (colorFrequency.get(hexColor) || 0) + 1);
+            }
+        }
+        if ('children' in node) {
+            for (const child of node.children) {
+                traverse(child);
+            }
+        }
+    };
+    traverse(root);
+    if (allColorNodes.length === 0) {
+        return [];
+    }
+    // Sort colors by layer name (alphabetical)
+    const sortedColors = allColorNodes
+        .reduce((acc, { node, color }) => {
+        if (!acc.find(item => item.color === color)) {
+            const oklch = hexToOKLCH(color);
+            acc.push({
+                node,
+                color,
+                frequency: colorFrequency.get(color) || 1,
+                lightness: oklch.L
+            });
+        }
+        return acc;
+    }, [])
+        .sort((a, b) => {
+        // Natural sort by layer name (handles numbers correctly)
+        return naturalSort(a.node.name, b.node.name);
+    });
+    // Smart role assignment - dynamic number of colors
+    for (let i = 0; i < sortedColors.length; i++) {
+        const { node, color } = sortedColors[i];
+        // First color is Base, others are Color1, Color2, Color3, etc.
+        const role = i === 0 ? 'Base' : `Color${i}`;
+        // Auto-assign role to node
+        markRole(node, role);
+        layerColors.push({
+            nodeId: node.id,
+            layerName: node.name,
+            color,
+            role
+        });
+    }
+    return layerColors;
+}
+// =============================================================================
+// MAIN PLUGIN LOGIC
+// =============================================================================
+// Show UI for all editor types
+figma.showUI(__html__, { width: 320, height: 480 });
+// Handle messages from UI
+figma.ui.onmessage = async (msg) => {
+    try {
+        switch (msg.type) {
+            case MessageType.ANALYZE_SELECTION:
+                handleAnalyzeSelection();
+                break;
+            case MessageType.UPDATE_ROLE:
+                await handleUpdateRole(msg.nodeId, msg.role);
+                break;
+            case MessageType.CREATE_TEMPLATE:
+                await handleCreateTemplate(msg.templateName, msg.layerColors);
+                break;
+            case MessageType.APPLY_TEMPLATE:
+                await handleApplyTemplate(msg.templateId, msg.colorChanges);
+                break;
+            case MessageType.BATCH_GENERATE:
+                await handleBatchGenerate(msg.templateId, msg.baseColors, msg.columns, msg.gap);
+                break;
+            case MessageType.GET_TEMPLATES:
+                await handleGetTemplates();
+                break;
+            default:
+                figma.notify('Unknown message type', { error: true });
+        }
+    }
+    catch (error) {
+        figma.notify(`Error: ${error.message}`, { error: true });
+        console.error('ArtyColors Error:', error);
+    }
+};
+// =============================================================================
+// MESSAGE HANDLERS
+// =============================================================================
+function handleAnalyzeSelection() {
+    const selection = figma.currentPage.selection;
+    if (selection.length === 0) {
+        figma.notify('Please select a component or group to analyze');
+        return;
+    }
+    const root = selection[0];
+    const layerColors = analyzeNodeColors(root);
+    if (layerColors.length === 0) {
+        figma.notify('No layers with solid fills found in selection');
+        return;
+    }
+    // Send analysis results to UI
+    figma.ui.postMessage({
+        type: 'selection-analyzed',
+        layerColors
+    });
+}
+async function handleUpdateRole(nodeId, role) {
+    const node = await figma.getNodeByIdAsync(nodeId);
+    if (node) {
+        markRole(node, role);
+        figma.notify(`Updated ${node.name} to role ${role}`);
+    }
+}
+async function handleCreateTemplate(templateName, layerColors) {
+    if (layerColors.length === 0) {
+        figma.notify('No colors to create template from');
+        return;
+    }
+    // Find the base color
+    const baseColor = layerColors.find(lc => lc.role === 'Base');
+    if (!baseColor) {
+        figma.notify('No Base color found. Please assign a Base role.');
+        return;
+    }
+    const template = {
+        id: generateId(),
+        name: templateName,
+        colorNames: {},
+        originalColors: {},
+        roles: {}
+    };
+    // Store display names, original colors, and compute rules for each color
+    for (const layerColor of layerColors) {
+        const displayName = layerColor.displayName || layerColor.layerName;
+        template.colorNames[layerColor.role] = displayName;
+        template.originalColors[layerColor.role] = layerColor.color;
+        if (layerColor.role !== 'Base') {
+            template.roles[layerColor.role] = computeRelativeRule(baseColor.color, layerColor.color);
+        }
+    }
+    // Store template
+    await storeTemplate(template);
+    figma.notify(`Template "${templateName}" created successfully`);
+    await handleGetTemplates(); // Refresh UI
+}
+async function handleApplyTemplate(templateId, colorChanges) {
+    const template = await getTemplate(templateId);
+    if (!template) {
+        figma.notify('Template not found');
+        return;
+    }
+    const selection = figma.currentPage.selection;
+    if (selection.length === 0) {
+        figma.notify('Please select nodes to apply template to');
+        return;
+    }
+    // Extract base color (required for calculations)
+    const baseColor = colorChanges['Base'];
+    if (!baseColor) {
+        figma.notify('Base color is required');
+        return;
+    }
+    for (const root of selection) {
+        applyTemplateToRootWithChanges(root, template, colorChanges);
+    }
+    figma.notify('Template applied successfully');
+}
+async function handleBatchGenerate(templateId, baseColors, columns, gap) {
+    // Implementation for batch generation will be added in Phase 5
+    figma.notify('Batch generation coming soon!');
+}
+async function handleGetTemplates() {
+    const templates = await getAllTemplates();
+    figma.ui.postMessage({
+        type: 'templates-updated',
+        templates
+    });
+}
+// =============================================================================
+// UTILITY FUNCTIONS
+// =============================================================================
+function rgbToHex(color) {
+    const toHex = (c) => Math.round(c * 255).toString(16).padStart(2, '0');
+    return `#${toHex(color.r)}${toHex(color.g)}${toHex(color.b)}`;
+}
+function generateId() {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2);
+}
+function applyTemplateToRoot(root, template, baseHex) {
+    const roleIndex = indexRoles(root);
+    // Apply base color
+    for (const node of roleIndex.Base) {
+        applyColorToNode(node, baseHex);
+    }
+    // Apply derived colors
+    for (const [roleName, rule] of Object.entries(template.roles)) {
+        if (rule) {
+            const derivedColor = applyRule(rule, baseHex);
+            const nodes = roleIndex[roleName];
+            for (const node of nodes) {
+                applyColorToNode(node, derivedColor);
+            }
+        }
+    }
+    // Store template reference on root
+    root.setPluginData('templateId', template.id);
+    root.setPluginData('baseColor', baseHex);
+}
+function applyTemplateToRootWithChanges(root, template, colorChanges) {
+    const roleIndex = indexRoles(root);
+    const baseColor = colorChanges['Base'];
+    // Calculate all colors based on user changes - start with all roles from template
+    const finalColors = {};
+    // Initialize with base color
+    finalColors['Base'] = baseColor;
+    // Handle direct color assignments (user picked specific colors)
+    Object.entries(colorChanges).forEach(([role, color]) => {
+        finalColors[role] = color;
+    });
+    // Calculate derived colors for roles not explicitly set
+    Object.entries(template.roles).forEach(([roleName, rule]) => {
+        if (rule && !(roleName in colorChanges)) {
+            // User didn't specify this color, so derive it from base
+            finalColors[roleName] = applyRule(rule, baseColor);
+        }
+    });
+    // Apply all final colors
+    Object.entries(finalColors).forEach(([role, color]) => {
+        const nodes = roleIndex[role] || [];
+        for (const node of nodes) {
+            applyColorToNode(node, color);
+        }
+    });
+    // Store template reference on root
+    root.setPluginData('templateId', template.id);
+    root.setPluginData('baseColor', baseColor);
+}
+function applyColorToNode(node, hexColor) {
+    if (!('fills' in node))
+        return;
+    // Convert hex to RGB
+    const hex = hexColor.replace('#', '');
+    const r = parseInt(hex.substr(0, 2), 16) / 255;
+    const g = parseInt(hex.substr(2, 2), 16) / 255;
+    const b = parseInt(hex.substr(4, 2), 16) / 255;
+    const fills = [...node.fills];
+    if (fills.length > 0 && fills[0].type === 'SOLID') {
+        fills[0] = Object.assign(Object.assign({}, fills[0]), { color: { r, g, b } });
+        node.fills = fills;
+    }
+}
+// Template storage functions
+async function storeTemplate(template) {
+    const templates = await getAllTemplates();
+    templates[template.id] = template;
+    await figma.clientStorage.setAsync('templates', templates);
+}
+async function getTemplate(id) {
+    const templates = await getAllTemplates();
+    return templates[id] || null;
+}
+async function getAllTemplates() {
+    try {
+        return await figma.clientStorage.getAsync('templates') || {};
+    }
+    catch (_a) {
+        return {};
+    }
+}
+console.log('ArtyColors plugin loaded successfully');

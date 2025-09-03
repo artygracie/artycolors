@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>ArtyColors</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+      padding: 0;
+      font-size: 12px;
+      color: #333;
+      background: white;
+    }
+    
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .tab {
+      flex: 1;
+      padding: 12px 16px;
+      background: #f8f9fa;
+      border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      color: #666;
+      transition: all 0.2s ease;
+    }
+    
+    .tab.active {
+      background: white;
+      color: #007ACC;
+      border-bottom-color: #007ACC;
+    }
+    
+    .tab:hover:not(.active) {
+      background: #f0f1f2;
+      color: #333;
+    }
+    
+    .tab-content {
+      display: none;
+      padding: 16px;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    .section {
+      margin-bottom: 24px;
+    }
+    
+    .section:last-child {
+      margin-bottom: 0;
+    }
+    
+    h3 {
+      margin: 0 0 12px 0;
+      font-size: 13px;
+      font-weight: 600;
+      color: #1a1a1a;
+    }
+    
+    .role-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    
+    .role-button {
+      padding: 8px 12px;
+      border: 1px solid #d0d0d0;
+      background: white;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    
+    .role-button:hover {
+      background: #f5f5f5;
+      border-color: #999;
+    }
+    
+    .role-button.base { border-color: #007ACC; color: #007ACC; }
+    .role-button.role-a { border-color: #FF6B35; color: #FF6B35; }
+    .role-button.role-b { border-color: #4ECDC4; color: #4ECDC4; }
+    .role-button.role-c { border-color: #FFE66D; color: #FFE66D; }
+    
+    .role-button.base:hover { background: #E3F2FD; }
+    .role-button.role-a:hover { background: #FFF3F0; }
+    .role-button.role-b:hover { background: #F0FDFC; }
+    .role-button.role-c:hover { background: #FFFEF5; }
+    
+    .input-group {
+      margin-bottom: 12px;
+    }
+    
+    .input-group label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 11px;
+      color: #666;
+      font-weight: 500;
+    }
+    
+    .input-group input, .input-group select {
+      width: 100%;
+      padding: 6px 8px;
+      border: 1px solid #d0d0d0;
+      border-radius: 4px;
+      font-size: 12px;
+      box-sizing: border-box;
+    }
+    
+    .primary-button, .secondary-button {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      margin-bottom: 8px;
+    }
+    
+    .primary-button {
+      background: #007ACC;
+      color: white;
+    }
+    
+    .primary-button:hover {
+      background: #0066AA;
+    }
+    
+    .primary-button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    
+    .secondary-button {
+      background: white;
+      color: #333;
+      border: 1px solid #d0d0d0;
+    }
+    
+    .secondary-button:hover {
+      background: #f5f5f5;
+    }
+    
+    .template-dropdown {
+      padding: 8px 12px;
+      border: 1px solid #d0d0d0;
+      border-radius: 4px;
+      font-size: 12px;
+      background: white;
+      cursor: pointer;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    
+    .template-dropdown:focus {
+      outline: none;
+      border-color: #007ACC;
+      box-shadow: 0 0 0 1px #007ACC;
+    }
+    
+    .color-input {
+      width: 60px !important;
+      height: 32px !important;
+      padding: 2px !important;
+      border: 1px solid #d0d0d0 !important;
+      border-radius: 4px !important;
+      cursor: pointer !important;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+      font-size: 11px;
+      font-style: italic;
+    }
+    
+    .status-message {
+      padding: 8px;
+      border-radius: 4px;
+      margin-bottom: 12px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+    
+    .status-message.success {
+      background: #E8F5E8;
+      color: #2E7D32;
+      border: 1px solid #C8E6C9;
+    }
+    
+    .status-message.error {
+      background: #FFEBEE;
+      color: #C62828;
+      border: 1px solid #FFCDD2;
+    }
+    
+    .workflow-step {
+      background: #f8f9fa;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      font-size: 11px;
+      color: #666;
+      line-height: 1.4;
+    }
+    
+    .color-list {
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    
+    .color-item {
+      display: flex;
+      align-items: center;
+      padding: 8px 10px;
+      border-bottom: 1px solid #e0e0e0;
+      gap: 10px;
+    }
+    
+    .color-item:last-child {
+      border-bottom: none;
+    }
+    
+    .color-swatch {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      border: 1px solid #d0d0d0;
+      flex-shrink: 0;
+    }
+    
+    .color-hex {
+      font-size: 10px;
+      color: #666;
+      font-family: monospace;
+      font-weight: 500;
+      width: 60px;
+      flex-shrink: 0;
+    }
+    
+    .color-layer-name {
+      font-size: 11px;
+      font-weight: 500;
+      color: #333;
+      flex: 1;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .color-name-input {
+      flex: 1;
+      padding: 4px 8px;
+      border: 1px solid #d0d0d0;
+      border-radius: 3px;
+      font-size: 11px;
+      background: white;
+      color: #333;
+      min-width: 0;
+    }
+    
+    .color-name-input:focus {
+      outline: none;
+      border-color: #007ACC;
+      box-shadow: 0 0 0 1px #007ACC;
+    }
+    
+    .apply-color-section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      margin-bottom: 12px;
+    }
+    
+    .apply-color-label {
+      font-size: 11px;
+      color: #333;
+      font-weight: 500;
+      min-width: 80px;
+    }
+    
+    .apply-color-input {
+      width: 40px !important;
+      height: 24px !important;
+      padding: 2px !important;
+      border: 1px solid #d0d0d0 !important;
+      border-radius: 4px !important;
+      cursor: pointer !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="tabs">
+    <button class="tab active" data-tab="create">Create Template</button>
+    <button class="tab" data-tab="apply">Apply Template</button>
+  </div>
+
+  <!-- Create Template Tab -->
+  <div class="tab-content active" id="create-tab">
+    <div class="section">
+      <h3>Create Template</h3>
+      <div class="workflow-step">
+        Select a component or group to automatically detect colors and assign roles
+      </div>
+      <button class="primary-button" id="analyze-selection">Analyze Selection</button>
+      
+      <div id="analysis-results" style="display: none;">
+        <div class="input-group">
+          <label>Detected Colors</label>
+          <div id="color-list" class="color-list">
+            <!-- Colors will be populated here -->
+          </div>
+        </div>
+        
+        <div id="save-template-inline" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #e0e0e0;">
+          <div class="input-group">
+            <label for="template-name">Save template as</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" id="template-name" placeholder="e.g., Button Primary" style="flex: 1;">
+              <button class="primary-button" id="create-template" style="width: auto; min-width: 80px; margin-bottom: 0;">Save</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Apply Template Tab -->
+  <div class="tab-content" id="apply-tab">
+    <div class="section">
+      <h3>Select Template</h3>
+      <div class="workflow-step">
+        Choose a template to apply to selected components
+      </div>
+      
+      <div class="input-group">
+        <label for="template-dropdown">Template</label>
+        <select id="template-dropdown" class="template-dropdown">
+          <option value="">Select a template...</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section" id="color-picker-section" style="display: none;">
+      <h3>Choose Colors</h3>
+      <div class="workflow-step">
+        Pick which colors to change - others will adjust relatively
+      </div>
+      <div id="template-colors">
+        <!-- Template color pickers will be populated here -->
+      </div>
+    </div>
+
+    <div class="section">
+      <button class="primary-button" id="apply-template" disabled>Apply to Selection</button>
+    </div>
+  </div>
+
+
+
+  <div id="status-container"></div>
+
+<script>
+    let selectedTemplateId = null;
+    let templates = {};
+    let currentLayerColors = [];
+    let templateColors = {};
+
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.onclick = () => {
+        const tabName = tab.getAttribute('data-tab');
+        
+        // Update tabs
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        
+        tab.classList.add('active');
+        document.getElementById(tabName + '-tab').classList.add('active');
+        
+        // Load templates when switching to apply tab
+        if (tabName === 'apply') {
+          postMessage('get-templates');
+        }
+      };
+    });
+
+    // Analyze selection
+    document.getElementById('analyze-selection').onclick = () => {
+      postMessage('analyze-selection');
+    };
+
+    // Template creation
+    document.getElementById('create-template').onclick = () => {
+      const templateName = document.getElementById('template-name').value.trim();
+      if (!templateName) {
+        showStatus('Please enter a template name', 'error');
+        return;
+      }
+      
+      if (currentLayerColors.length === 0) {
+        showStatus('Please analyze a selection first', 'error');
+        return;
+      }
+      
+
+      postMessage('create-template', { templateName, layerColors: currentLayerColors });
+      document.getElementById('template-name').value = '';
+    };
+
+    // Template application
+    document.getElementById('apply-template').onclick = () => {
+      if (!selectedTemplateId) {
+        showStatus('Please select a template', 'error');
+        return;
+      }
+      
+      // Collect color changes from the UI
+      const colorChanges = {};
+      Object.keys(templateColors).forEach(role => {
+        const input = document.getElementById(`color-${role.toLowerCase()}`);
+        if (input) {
+          colorChanges[role] = input.value;
+        }
+      });
+      
+      postMessage('apply-template', { 
+        templateId: selectedTemplateId, 
+        colorChanges 
+      });
+    };
+
+    // Template dropdown change handler
+    document.getElementById('template-dropdown').onchange = (e) => {
+      const templateId = e.target.value;
+      if (templateId) {
+        selectTemplate(templateId);
+      } else {
+        hideColorPickers();
+      }
+    };
+
+
+
+    // Helper functions
+    function postMessage(type, data = {}) {
+      parent.postMessage({ 
+        pluginMessage: { type, ...data } 
+      }, '*');
+    }
+
+    function showStatus(message, type = 'success') {
+      const container = document.getElementById('status-container');
+      const statusEl = document.createElement('div');
+      statusEl.className = `status-message ${type}`;
+      statusEl.textContent = message;
+      
+      container.innerHTML = '';
+      container.appendChild(statusEl);
+      
+      setTimeout(() => {
+        if (statusEl.parentNode) {
+          statusEl.parentNode.removeChild(statusEl);
+        }
+      }, 3000);
+    }
+
+    function displayAnalysisResults(layerColors) {
+      currentLayerColors = layerColors;
+      const resultsEl = document.getElementById('analysis-results');
+      const colorListEl = document.getElementById('color-list');
+      
+      if (layerColors.length === 0) {
+        resultsEl.style.display = 'none';
+        document.getElementById('create-template').disabled = true;
+        return;
+      }
+      
+      resultsEl.style.display = 'block';
+      colorListEl.innerHTML = '';
+      
+      layerColors.forEach((layerColor, index) => {
+        const itemEl = document.createElement('div');
+        itemEl.className = 'color-item';
+        
+        itemEl.innerHTML = `
+          <div class="color-swatch" style="background-color: ${layerColor.color}"></div>
+          <div class="color-hex">${layerColor.color.toUpperCase()}</div>
+          <input type="text" class="color-name-input" value="${layerColor.layerName}" data-node-id="${layerColor.nodeId}" data-role="${layerColor.role}" placeholder="Color name">
+        `;
+        
+        // Handle name change
+        const nameInput = itemEl.querySelector('.color-name-input');
+        nameInput.onchange = nameInput.onblur = (e) => {
+          const newName = e.target.value.trim() || layerColor.layerName; // Fallback to original name
+          const nodeId = e.target.getAttribute('data-node-id');
+          
+          // Update local data
+          const layerIndex = currentLayerColors.findIndex(lc => lc.nodeId === nodeId);
+          if (layerIndex >= 0) {
+            currentLayerColors[layerIndex].displayName = newName;
+          }
+          
+          e.target.value = newName; // Ensure input shows the final name
+        };
+        
+        colorListEl.appendChild(itemEl);
+      });
+      
+      // Enable template creation
+      document.getElementById('create-template').disabled = false;
+    }
+
+    function updateTemplateList(templatesData) {
+      templates = templatesData;
+
+      
+      const dropdown = document.getElementById('template-dropdown');
+      
+      // Clear existing options (keep the default one)
+      dropdown.innerHTML = '<option value="">Select a template...</option>';
+      
+      if (Object.keys(templates).length === 0) {
+        hideColorPickers();
+        return;
+      }
+      
+      // Add template options
+      for (const [id, template] of Object.entries(templates)) {
+
+        const option = document.createElement('option');
+        option.value = id;
+        option.textContent = template.name;
+        dropdown.appendChild(option);
+      }
+      
+      updateApplyButton();
+    }
+
+    function selectTemplate(id) {
+      selectedTemplateId = id;
+      updateTemplateList(templates);
+      showColorPickers(templates[id]);
+    }
+
+    function showColorPickers(template) {
+      const section = document.getElementById('color-picker-section');
+      const container = document.getElementById('template-colors');
+      
+      if (!template) {
+        hideColorPickers();
+        return;
+      }
+      
+
+      
+      // Clear existing pickers
+      container.innerHTML = '';
+      templateColors = {};
+      
+      // Check if template has original colors
+      if (template.originalColors && Object.keys(template.originalColors).length > 0) {
+        console.log('Found original colors:', template.originalColors);
+        // Use original colors from template
+        Object.keys(template.originalColors).forEach(role => {
+          templateColors[role] = template.originalColors[role];
+        });
+      } else {
+        console.log('No original colors found, template keys:', Object.keys(template));
+        console.log('Template roles:', template.roles);
+        console.log('Template colorNames:', template.colorNames);
+        
+        // Fallback to default colors if original colors don't exist (for old templates)
+        templateColors['Base'] = '#007ACC';
+        
+        // Generate some default colors for roles based on base
+        // Generate default colors for all roles (including Base)
+        const allRoles = Object.keys(template.originalColors || {});
+        allRoles.forEach((role, index) => {
+          // Create different default colors for each role
+          const hue = (220 + index * 60) % 360;
+          templateColors[role] = hslToHex(hue, 60, 50);
+        });
+      }
+      
+      // Create UI for each color (Base first, then others in original template order)
+      const baseRoles = templateColors['Base'] ? ['Base'] : [];
+      const otherRoles = Object.keys(templateColors).filter(r => r !== 'Base');
+      const allRoles = [...baseRoles, ...otherRoles];
+      
+      allRoles.forEach(role => {
+        const colorSection = document.createElement('div');
+        colorSection.className = 'apply-color-section';
+        
+        // Use stored display name or fallback to role name
+        const displayName = template.colorNames?.[role] || (role === 'Base' ? 'Base Color' : 'Role ' + role);
+        
+        const hasOriginalColors = template.originalColors && Object.keys(template.originalColors).length > 0;
+        const statusText = role === 'Base' ? 'Primary color' : (hasOriginalColors ? 'Original color' : 'Default color');
+        
+        colorSection.innerHTML = `
+          <div class="apply-color-label">${displayName}</div>
+          <input type="color" id="color-${role.toLowerCase()}" class="apply-color-input" value="${templateColors[role]}" data-role="${role}">
+          <div style="flex: 1; font-size: 11px; color: #666;">
+            ${statusText}
+          </div>
+        `;
+        
+        // Add real-time change handler
+        const colorInput = colorSection.querySelector('.apply-color-input');
+        colorInput.addEventListener('input', (e) => {
+          handleColorChange(e.target.getAttribute('data-role'), e.target.value, template);
+        });
+        
+        container.appendChild(colorSection);
+      });
+      
+      section.style.display = 'block';
+      updateApplyButton();
+    }
+    
+    function calculateRelativeColor(rule, baseColor) {
+      // Simplified OKLCH-like calculation for better color accuracy
+      const hex = baseColor.replace('#', '');
+      let r = parseInt(hex.substr(0, 2), 16) / 255;
+      let g = parseInt(hex.substr(2, 2), 16) / 255;
+      let b = parseInt(hex.substr(4, 2), 16) / 255;
+      
+      // Apply gamma correction (approximate sRGB to linear)
+      r = r <= 0.04045 ? r / 12.92 : Math.pow((r + 0.055) / 1.055, 2.4);
+      g = g <= 0.04045 ? g / 12.92 : Math.pow((g + 0.055) / 1.055, 2.4);
+      b = b <= 0.04045 ? b / 12.92 : Math.pow((b + 0.055) / 1.055, 2.4);
+      
+      // Better lightness calculation (closer to L*)
+      const lightness = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      
+      // Apply lightness changes
+      let newLightness = lightness;
+      if (rule.Lmode === 'lighten') {
+        newLightness = Math.min(1, lightness + rule.k);
+      } else {
+        newLightness = Math.max(0, lightness - rule.k);
+      }
+      
+      // Apply ratio to all channels
+      const ratio = lightness > 0.001 ? newLightness / lightness : 1;
+      let newR = r * ratio;
+      let newG = g * ratio;
+      let newB = b * ratio;
+      
+      // Apply chroma adjustments (simplified)
+      if (rule.Cmul !== 1) {
+        const avgChannel = (newR + newG + newB) / 3;
+        newR = avgChannel + (newR - avgChannel) * rule.Cmul;
+        newG = avgChannel + (newG - avgChannel) * rule.Cmul;
+        newB = avgChannel + (newB - avgChannel) * rule.Cmul;
+      }
+      
+      // Clamp values
+      newR = Math.max(0, Math.min(1, newR));
+      newG = Math.max(0, Math.min(1, newG));
+      newB = Math.max(0, Math.min(1, newB));
+      
+      // Convert back to sRGB
+      newR = newR <= 0.0031308 ? newR * 12.92 : 1.055 * Math.pow(newR, 1/2.4) - 0.055;
+      newG = newG <= 0.0031308 ? newG * 12.92 : 1.055 * Math.pow(newG, 1/2.4) - 0.055;
+      newB = newB <= 0.0031308 ? newB * 12.92 : 1.055 * Math.pow(newB, 1/2.4) - 0.055;
+      
+      // Convert to hex
+      const toHex = (c) => Math.round(Math.max(0, Math.min(255, c * 255))).toString(16).padStart(2, '0');
+      return `#${toHex(newR)}${toHex(newG)}${toHex(newB)}`;
+    }
+    
+    function handleColorChange(changedRole, newColor, template) {
+      // Update the color that was changed
+      templateColors[changedRole] = newColor;
+      
+      // ANCHOR-BASED RELATIVITY: The changed color becomes the anchor
+      // Calculate equal shifts for all other colors
+      
+      const originalChangedColor = template.originalColors[changedRole];
+      if (!originalChangedColor) {
+        console.warn('No original color found for', changedRole);
+        return;
+      }
+      
+      // Calculate the shift from original to new color
+      const colorShift = calculateColorShift(originalChangedColor, newColor);
+
+      
+      // Apply equal shifts to all other colors
+      Object.keys(template.originalColors).forEach(role => {
+        if (role !== changedRole) { // Don't recalculate the anchor color
+          const originalColor = template.originalColors[role];
+          const shiftedColor = applyColorShift(originalColor, colorShift, 1.0); // Equal 100% shift for all
+          templateColors[role] = shiftedColor;
+          
+          // Update the color input visual
+          const input = document.getElementById(`color-${role.toLowerCase()}`);
+          if (input) {
+            input.value = shiftedColor;
+          }
+        }
+      });
+      
+      // Update status texts
+      Object.keys(templateColors).forEach(role => {
+        const roleElement = document.getElementById(`color-${role.toLowerCase()}`).parentElement;
+        const statusElement = roleElement.querySelector('div:last-child');
+        if (statusElement) {
+          if (role === changedRole) {
+            statusElement.textContent = 'Anchor (changed)';
+            statusElement.style.color = '#007ACC';
+          } else {
+            statusElement.textContent = 'Shifted equally';
+            statusElement.style.color = '#666';
+          }
+        }
+      });
+    }
+    
+    function calculateColorShift(originalHex, newHex) {
+      // Convert both colors to HSL for easier shift calculation
+      const originalHSL = hexToHSL(originalHex);
+      const newHSL = hexToHSL(newHex);
+      
+      return {
+        hueShift: newHSL.h - originalHSL.h,
+        satShift: newHSL.s - originalHSL.s,
+        lightShift: newHSL.l - originalHSL.l
+      };
+    }
+    
+    function applyColorShift(originalHex, shift, intensity = 1.0) {
+      // Apply the shift to the original color with given intensity
+      const originalHSL = hexToHSL(originalHex);
+      
+      let newH = originalHSL.h + (shift.hueShift * intensity);
+      let newS = Math.max(0, Math.min(100, originalHSL.s + (shift.satShift * intensity)));
+      let newL = Math.max(0, Math.min(100, originalHSL.l + (shift.lightShift * intensity)));
+      
+      // Handle hue wraparound
+      if (newH < 0) newH += 360;
+      if (newH >= 360) newH -= 360;
+      
+      return hslToHex(newH, newS, newL);
+    }
+    
+    function hexToHSL(hex) {
+      // Convert hex to RGB first
+      const r = parseInt(hex.slice(1, 3), 16) / 255;
+      const g = parseInt(hex.slice(3, 5), 16) / 255;
+      const b = parseInt(hex.slice(5, 7), 16) / 255;
+      
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      let h, s, l = (max + min) / 2;
+      
+      if (max === min) {
+        h = s = 0; // achromatic
+      } else {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+          case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+          case g: h = (b - r) / d + 2; break;
+          case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+      }
+      
+      return {
+        h: h * 360,
+        s: s * 100,
+        l: l * 100
+      };
+    }
+    
+    function reverseCalculateBaseColor(rule, derivedColor) {
+      // This reverses the color calculation to find what base color would produce the derived color
+      const hex = derivedColor.replace('#', '');
+      let r = parseInt(hex.substr(0, 2), 16) / 255;
+      let g = parseInt(hex.substr(2, 2), 16) / 255;
+      let b = parseInt(hex.substr(4, 2), 16) / 255;
+      
+      // Apply gamma correction (approximate sRGB to linear)
+      r = r <= 0.04045 ? r / 12.92 : Math.pow((r + 0.055) / 1.055, 2.4);
+      g = g <= 0.04045 ? g / 12.92 : Math.pow((g + 0.055) / 1.055, 2.4);
+      b = b <= 0.04045 ? b / 12.92 : Math.pow((b + 0.055) / 1.055, 2.4);
+      
+      const derivedLightness = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      
+      // Reverse the chroma adjustments first (if any)
+      if (rule.Cmul !== 1 && rule.Cmul > 0) {
+        const avgChannel = (r + g + b) / 3;
+        r = avgChannel + (r - avgChannel) / rule.Cmul;
+        g = avgChannel + (g - avgChannel) / rule.Cmul;
+        b = avgChannel + (b - avgChannel) / rule.Cmul;
+      }
+      
+      // Reverse the lightness calculation
+      let baseLightness = derivedLightness;
+      if (rule.Lmode === 'lighten') {
+        baseLightness = Math.max(0, derivedLightness - rule.k);
+      } else {
+        baseLightness = Math.min(1, derivedLightness + rule.k);
+      }
+      
+      // Apply ratio to get base color
+      const ratio = derivedLightness > 0.001 ? baseLightness / derivedLightness : 1;
+      let newR = r * ratio;
+      let newG = g * ratio;
+      let newB = b * ratio;
+      
+      // Clamp values
+      newR = Math.max(0, Math.min(1, newR));
+      newG = Math.max(0, Math.min(1, newG));
+      newB = Math.max(0, Math.min(1, newB));
+      
+      // Convert back to sRGB
+      newR = newR <= 0.0031308 ? newR * 12.92 : 1.055 * Math.pow(newR, 1/2.4) - 0.055;
+      newG = newG <= 0.0031308 ? newG * 12.92 : 1.055 * Math.pow(newG, 1/2.4) - 0.055;
+      newB = newB <= 0.0031308 ? newB * 12.92 : 1.055 * Math.pow(newB, 1/2.4) - 0.055;
+      
+      // Convert to hex
+      const toHex = (c) => Math.round(Math.max(0, Math.min(255, c * 255))).toString(16).padStart(2, '0');
+      return `#${toHex(newR)}${toHex(newG)}${toHex(newB)}`;
+    }
+
+    function hslToHex(h, s, l) {
+      // Convert HSL to RGB, then to hex
+      h = h / 360;
+      s = s / 100;
+      l = l / 100;
+      
+      const hue2rgb = (p, q, t) => {
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1/6) return p + (q - p) * 6 * t;
+        if (t < 1/2) return q;
+        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+        return p;
+      };
+      
+      let r, g, b;
+      if (s === 0) {
+        r = g = b = l; // achromatic
+      } else {
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        r = hue2rgb(p, q, h + 1/3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1/3);
+      }
+      
+      const toHex = (c) => {
+        const hex = Math.round(c * 255).toString(16);
+        return hex.length === 1 ? '0' + hex : hex;
+      };
+      
+      return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+    }
+
+    function hideColorPickers() {
+      document.getElementById('color-picker-section').style.display = 'none';
+      templateColors = {};
+      updateApplyButton();
+    }
+
+    function updateApplyButton() {
+      const button = document.getElementById('apply-template');
+      button.disabled = !selectedTemplateId || Object.keys(templateColors).length === 0;
+    }
+
+    // Listen for messages from the plugin
+    window.onmessage = (event) => {
+      const { type, ...data } = event.data.pluginMessage || {};
+      
+      switch (type) {
+        case 'selection-analyzed':
+          displayAnalysisResults(data.layerColors);
+          showStatus(`Found ${data.layerColors.length} colors in selection`);
+          break;
+        case 'templates-updated':
+          updateTemplateList(data.templates);
+          break;
+        default:
+          break;
+      }
+    };
+
+    // Initialize: request templates on load
+    setTimeout(() => {
+      postMessage('get-templates');
+    }, 100);
+</script>
+</body>
+</html>
