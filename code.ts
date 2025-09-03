@@ -520,6 +520,13 @@ async function handleCreateTemplate(templateName: string, layerColors: LayerColo
   await storeTemplate(template);
   
   figma.notify(`Template "${templateName}" created successfully`);
+  
+  // Send success message to UI for toast
+  figma.ui.postMessage({
+    type: 'template-created',
+    templateName
+  });
+  
   await handleGetTemplates(); // Refresh UI
 }
 

@@ -4,47 +4,128 @@
   <meta charset="utf-8">
   <title>ArtyColors</title>
   <style>
+    :root {
+      /* Colors */
+      --bg: #F9FAFB;
+      --surface: #FFFFFF;
+      --border: #E5E7EB;
+      --text: #111827;
+      --muted: #6B7280;
+      --disabled: #9CA3AF;
+
+      --brand-600: #1D4ED8;
+      --brand-700: #1E40AF;
+      --focus-ring: rgba(29,78,216,.35);
+
+      /* Radii & shadow */
+      --radius: 8px;
+      --radius-sm: 4px;
+      --shadow-1: 0 1px 2px rgba(0,0,0,.06), 0 1px 1px rgba(0,0,0,.04);
+
+      /* Spacing (8-pt) */
+      --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px; --s-6: 24px;
+
+      /* Typography */
+      --font-sans: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+      --fs-h1: 16px;
+      --fs-label: 12px;
+      --fs-body: 13px;
+      --lh: 1.4;
+    }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       margin: 0;
-      padding: 0;
-      font-size: 12px;
-      color: #333;
-      background: white;
+      background: var(--bg);
+      color: var(--text);
+      font: var(--fs-body)/var(--lh) var(--font-sans);
     }
     
+    h1 {
+      font-size: var(--fs-h1);
+      font-weight: 600;
+      margin: var(--s-4) 0 var(--s-3);
+    }
+    
+    .section-label {
+      font-size: var(--fs-label);
+      font-weight: 500;
+      color: var(--muted);
+      margin-bottom: var(--s-2);
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-1);
+    }
+
+    .input, .button, .pill, .tab-btn {
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+    }
+
+    input[type="text"], select, .input {
+      height: 36px;
+      padding: 0 var(--s-3);
+      background: var(--surface);
+      color: var(--text);
+      width: 100%;
+      box-sizing: border-box;
+      cursor: pointer;
+    }
+
+    input::placeholder {
+      color: var(--muted);
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--focus-ring);
+      outline-offset: 2px;
+      border-color: transparent;
+    }
+
     .tabs {
       display: flex;
-      border-bottom: 1px solid #e0e0e0;
+      gap: var(--s-4);
+      padding: var(--s-3) var(--s-4) var(--s-2);
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      position: sticky;
+      top: 0;
+      z-index: 1;
     }
-    
-    .tab {
-      flex: 1;
-      padding: 12px 16px;
-      background: #f8f9fa;
+
+    .tab-btn {
       border: none;
-      border-bottom: 2px solid transparent;
-      cursor: pointer;
-      font-size: 12px;
+      background: transparent;
+      color: var(--muted);
+      padding: var(--s-2) 0;
+      position: relative;
       font-weight: 500;
-      color: #666;
-      transition: all 0.2s ease;
+      cursor: pointer;
     }
-    
-    .tab.active {
-      background: white;
-      color: #007ACC;
-      border-bottom-color: #007ACC;
+
+    .tab-btn[aria-selected="true"] {
+      color: var(--text);
     }
-    
-    .tab:hover:not(.active) {
-      background: #f0f1f2;
-      color: #333;
+
+    .tab-btn[aria-selected="true"]::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -10px;
+      height: 2px;
+      background: var(--brand-600);
+      border-radius: 2px;
     }
     
     .tab-content {
       display: none;
-      padding: 16px;
+      padding: var(--s-4);
     }
     
     .tab-content.active {
@@ -52,18 +133,195 @@
     }
     
     .section {
-      margin-bottom: 24px;
+      margin-bottom: var(--s-6);
     }
     
     .section:last-child {
       margin-bottom: 0;
     }
     
-    h3 {
-      margin: 0 0 12px 0;
-      font-size: 13px;
-      font-weight: 600;
-      color: #1a1a1a;
+    .button.primary {
+      background: var(--brand-600);
+      color: #fff;
+      border: none;
+      height: 40px;
+      padding: 0 var(--s-5);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-1);
+      cursor: pointer;
+      font-weight: 500;
+      width: 100%;
+    }
+
+    .button.primary:hover {
+      background: var(--brand-700);
+    }
+
+    .button.primary:active {
+      filter: brightness(.96);
+    }
+
+    .button.primary:disabled {
+      background: #93C5FD;
+      cursor: not-allowed;
+    }
+
+    .button.secondary {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      height: 36px;
+      padding: 0 var(--s-4);
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-weight: 500;
+      width: 100%;
+    }
+
+    .button.secondary:hover {
+      background: #F9FAFB;
+    }
+
+    .input-group {
+      margin-bottom: var(--s-3);
+    }
+
+    .input-group label {
+      display: block;
+      font-size: var(--fs-label);
+      font-weight: 500;
+      color: var(--muted);
+      margin-bottom: var(--s-2);
+    }
+
+    .workflow-step {
+      background: #F3F4F6;
+      padding: var(--s-3);
+      border-radius: var(--radius);
+      margin-bottom: var(--s-3);
+      font-size: var(--fs-label);
+      color: var(--muted);
+      line-height: var(--lh);
+    }
+
+    /* Detected Colors List */
+    .list {
+      padding: var(--s-2);
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 24px auto 1fr;
+      align-items: center;
+      gap: var(--s-3);
+      padding: var(--s-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      min-height: 40px;
+      opacity: 0;
+      transform: translateY(4px);
+      animation: fadeIn .18s ease-out forwards;
+    }
+
+    .row.color-picker {
+      grid-template-columns: 24px auto 1fr 32px;
+    }
+
+    .row + .row {
+      margin-top: var(--s-2);
+    }
+
+    .swatch {
+      width: 24px;
+      height: 24px;
+      border-radius: var(--radius-sm);
+      border: 1px solid #D1D5DB;
+    }
+
+    .pill.hex {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: var(--radius-sm);
+      background: #F3F4F6;
+      color: var(--text);
+      border: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    .name {
+      width: 100%;
+      height: 32px;
+      padding: 0 var(--s-2);
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: var(--fs-body);
+    }
+
+    @keyframes fadeIn {
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .row {
+        animation: none;
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    /* Sticky Save Area */
+    .savebar {
+      position: sticky;
+      bottom: 0;
+      background: var(--surface);
+      padding: var(--s-3) var(--s-4);
+      border-top: 1px solid var(--border);
+      display: grid;
+      gap: var(--s-2);
+    }
+
+    .savebar-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: var(--s-3);
+    }
+
+    /* Toast notifications */
+    .toast {
+      position: fixed;
+      bottom: var(--s-4);
+      left: var(--s-4);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-1);
+      padding: var(--s-3) var(--s-4);
+      font-size: var(--fs-body);
+      color: var(--text);
+      z-index: 1000;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: all 0.2s ease-out;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .toast.success {
+      border-left: 3px solid #10B981;
+    }
+
+    .toast.error {
+      border-left: 3px solid #EF4444;
     }
     
     .role-buttons {
@@ -155,22 +413,7 @@
       background: #f5f5f5;
     }
     
-    .template-dropdown {
-      padding: 8px 12px;
-      border: 1px solid #d0d0d0;
-      border-radius: 4px;
-      font-size: 12px;
-      background: white;
-      cursor: pointer;
-      width: 100%;
-      box-sizing: border-box;
-    }
-    
-    .template-dropdown:focus {
-      outline: none;
-      border-color: #007ACC;
-      box-shadow: 0 0 0 1px #007ACC;
-    }
+
     
     .color-input {
       width: 60px !important;
@@ -283,122 +526,114 @@
       box-shadow: 0 0 0 1px #007ACC;
     }
     
-    .apply-color-section {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px;
-      background: #f8f9fa;
-      border-radius: 6px;
-      margin-bottom: 12px;
-    }
-    
-    .apply-color-label {
-      font-size: 11px;
-      color: #333;
+    .color-name-display {
+      flex: 1;
+      font-size: var(--fs-body);
       font-weight: 500;
-      min-width: 80px;
+      color: var(--text);
+      min-width: 0;
     }
     
-    .apply-color-input {
-      width: 40px !important;
-      height: 24px !important;
-      padding: 2px !important;
-      border: 1px solid #d0d0d0 !important;
-      border-radius: 4px !important;
-      cursor: pointer !important;
+    .color-picker-input {
+      width: 32px;
+      height: 24px;
+      padding: 2px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    
+    .status-text {
+      font-size: 10px;
+      color: var(--muted);
+      font-style: italic;
     }
     
     .variant-row {
       display: flex;
       align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
-      padding: 8px;
-      background: #f8f9fa;
-      border-radius: 4px;
-      border: 1px solid #e0e0e0;
+      gap: var(--s-2);
+      margin-bottom: var(--s-2);
+      padding: var(--s-2);
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
     }
     
     .variant-number {
-      font-size: 11px;
+      font-size: var(--fs-label);
       font-weight: 600;
-      color: #666;
-      min-width: 20px;
+      color: var(--muted);
+      min-width: 24px;
       text-align: center;
+      flex-shrink: 0;
     }
     
     .variant-anchor-dropdown {
       flex: 1;
-      padding: 4px 6px;
-      border: 1px solid #d0d0d0;
-      border-radius: 3px;
-      font-size: 11px;
-      background: white;
-      cursor: pointer;
+      height: 32px !important;
       min-width: 90px;
+      font-size: var(--fs-body) !important;
     }
     
     .variant-color-input {
       width: 70px;
-      padding: 2px 4px;
-      border: 1px solid #d0d0d0;
-      border-radius: 3px;
-      font-size: 10px;
-      font-family: monospace;
+      height: 32px !important;
+      font-family: var(--font-mono);
+      font-size: var(--fs-label) !important;
     }
     
     .remove-variant-btn {
-      background: #ff4757;
+      background: #EF4444;
       color: white;
       border: none;
-      border-radius: 3px;
-      width: 20px;
-      height: 20px;
+      border-radius: var(--radius-sm);
+      width: 24px;
+      height: 24px;
       cursor: pointer;
-      font-size: 10px;
+      font-size: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
+      flex-shrink: 0;
     }
     
     .remove-variant-btn:hover {
-      background: #ff3742;
+      background: #DC2626;
     }
   </style>
 </head>
 <body>
-  <div class="tabs">
-    <button class="tab active" data-tab="create">Create Template</button>
-    <button class="tab" data-tab="apply">Apply Template</button>
+  <div role="tablist" aria-label="Modes" class="tabs">
+    <button role="tab" aria-selected="true" class="tab-btn" data-tab="create">Create template</button>
+    <button role="tab" aria-selected="false" class="tab-btn" data-tab="apply">Apply template</button>
   </div>
 
   <!-- Create Template Tab -->
   <div class="tab-content active" id="create-tab">
     <div class="section">
-      <h3>Create Template</h3>
+      <h1>Create template</h1>
       <div class="workflow-step">
-        Select a component or group to automatically detect colors and assign roles
+        Select a component or group to automatically detect colors and assign color names
       </div>
-      <button class="primary-button" id="analyze-selection">Analyze Selection</button>
+      <button class="button primary" id="analyze-selection">Analyze selection</button>
       
-      <div id="analysis-results" style="display: none;">
+      <div id="analysis-results" style="display: none; margin-top: var(--s-6);">
         <div class="input-group">
-          <label>Detected Colors</label>
-          <div id="color-list" class="color-list">
+          <label class="section-label">Detected colors</label>
+          <div class="card list" id="color-list">
             <!-- Colors will be populated here -->
           </div>
         </div>
         
-        <div id="save-template-inline" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #e0e0e0;">
-          <div class="input-group">
-            <label for="template-name">Save template as</label>
-            <div style="display: flex; gap: 8px;">
-              <input type="text" id="template-name" placeholder="e.g., Button Primary" style="flex: 1;">
-              <button class="primary-button" id="create-template" style="width: auto; min-width: 80px; margin-bottom: 0;">Save</button>
-            </div>
+        <footer class="savebar" id="save-template-inline">
+          <label class="section-label" for="template-name">Save template as</label>
+          <div class="savebar-row">
+            <input id="template-name" class="input" placeholder="e.g., Button primary" />
+            <button class="button primary" id="create-template" style="width: auto; min-width: 80px;">Save</button>
           </div>
-        </div>
+        </footer>
       </div>
     </div>
   </div>
@@ -406,54 +641,55 @@
   <!-- Apply Template Tab -->
   <div class="tab-content" id="apply-tab">
     <div class="section">
-      <h3>Select Template</h3>
+      <h1>Apply template</h1>
       <div class="workflow-step">
         Choose a template to apply to selected components
       </div>
       
       <div class="input-group">
         <label for="template-dropdown">Template</label>
-        <select id="template-dropdown" class="template-dropdown">
+        <select id="template-dropdown" class="input">
           <option value="">Select a template...</option>
         </select>
       </div>
     </div>
 
     <div class="section" id="color-picker-section" style="display: none;">
-      <h3>Choose Colors</h3>
+      <h1>Choose colors</h1>
       <div class="workflow-step">
         Pick which colors to change - others will adjust relatively
       </div>
-      <div id="template-colors">
-        <!-- Template color pickers will be populated here -->
+      
+      <div class="input-group">
+        <label class="section-label">Template colors</label>
+        <div class="card list" id="template-colors">
+          <!-- Template color pickers will be populated here -->
+        </div>
       </div>
-    </div>
-
-    <div class="section">
-      <button class="primary-button" id="apply-template" disabled>Apply to Selection</button>
+      
+      <button class="button primary" id="apply-template" disabled>Apply to selection</button>
     </div>
 
     <div class="section" id="batch-section" style="display: none;">
-      <h3>Batch Generation</h3>
+      <h1>Batch generation</h1>
       <div class="workflow-step">
         Create multiple variants by changing different colors
       </div>
       
       <div class="input-group">
-        <label>Variants to Generate</label>
-        <div id="variant-list">
+        <label class="section-label">Variants to generate</label>
+        <div class="card list" id="variant-list">
           <!-- Variant rows will be populated here -->
         </div>
-        <button class="secondary-button" id="add-variant" style="margin-top: 8px;">+ Add Variant</button>
+        <button class="button secondary" id="add-variant" style="margin-top: var(--s-2);">+ Add variant</button>
       </div>
       
-      <button class="primary-button" id="batch-generate" disabled>Generate Variants</button>
+      <button class="button primary" id="batch-generate" disabled>Generate variants</button>
     </div>
   </div>
 
 
 
-  <div id="status-container"></div>
 
 <script>
     let selectedTemplateId = null;
@@ -461,24 +697,55 @@
     let currentLayerColors = [];
     let templateColors = {};
 
-    // Tab switching
-    document.querySelectorAll('.tab').forEach(tab => {
-      tab.onclick = () => {
-        const tabName = tab.getAttribute('data-tab');
+    // Tab switching with proper ARIA and keyboard support
+    document.querySelectorAll('.tab-btn').forEach((tab, index, tabs) => {
+      tab.onclick = () => switchTab(tab);
+      
+      tab.onkeydown = (e) => {
+        let targetIndex = index;
         
-        // Update tabs
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-        
-        tab.classList.add('active');
-        document.getElementById(tabName + '-tab').classList.add('active');
-        
-        // Load templates when switching to apply tab
-        if (tabName === 'apply') {
-          postMessage('get-templates');
+        switch (e.key) {
+          case 'ArrowLeft':
+            targetIndex = Math.max(0, index - 1);
+            break;
+          case 'ArrowRight':
+            targetIndex = Math.min(tabs.length - 1, index + 1);
+            break;
+          case 'Home':
+            targetIndex = 0;
+            break;
+          case 'End':
+            targetIndex = tabs.length - 1;
+            break;
+          case 'Enter':
+          case ' ':
+            switchTab(tab);
+            return;
+          default:
+            return;
         }
+        
+        e.preventDefault();
+        tabs[targetIndex].focus();
+        switchTab(tabs[targetIndex]);
       };
     });
+    
+    function switchTab(tab) {
+      const tabName = tab.getAttribute('data-tab');
+      
+      // Update ARIA states
+      document.querySelectorAll('.tab-btn').forEach(t => t.setAttribute('aria-selected', 'false'));
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      
+      tab.setAttribute('aria-selected', 'true');
+      document.getElementById(tabName + '-tab').classList.add('active');
+      
+      // Load templates when switching to apply tab
+      if (tabName === 'apply') {
+        postMessage('get-templates');
+      }
+    }
 
     // Analyze selection
     document.getElementById('analyze-selection').onclick = () => {
@@ -502,6 +769,13 @@
       postMessage('create-template', { templateName, layerColors: currentLayerColors });
       document.getElementById('template-name').value = '';
     };
+
+    // Enter key support for template name
+    document.getElementById('template-name').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !document.getElementById('create-template').disabled) {
+        document.getElementById('create-template').click();
+      }
+    });
 
     // Template application
     document.getElementById('apply-template').onclick = () => {
@@ -578,18 +852,26 @@
     }
 
     function showStatus(message, type = 'success') {
-      const container = document.getElementById('status-container');
-      const statusEl = document.createElement('div');
-      statusEl.className = `status-message ${type}`;
-      statusEl.textContent = message;
+      // Create toast notification
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
       
-      container.innerHTML = '';
-      container.appendChild(statusEl);
+      document.body.appendChild(toast);
       
+      // Trigger animation
+      requestAnimationFrame(() => {
+        toast.classList.add('show');
+      });
+      
+      // Remove after 3 seconds
       setTimeout(() => {
-        if (statusEl.parentNode) {
-          statusEl.parentNode.removeChild(statusEl);
-        }
+        toast.classList.remove('show');
+        setTimeout(() => {
+          if (toast.parentNode) {
+            toast.parentNode.removeChild(toast);
+          }
+        }, 200);
       }, 3000);
     }
 
@@ -609,16 +891,16 @@
       
       layerColors.forEach((layerColor, index) => {
         const itemEl = document.createElement('div');
-        itemEl.className = 'color-item';
+        itemEl.className = 'row';
         
         itemEl.innerHTML = `
-          <div class="color-swatch" style="background-color: ${layerColor.color}"></div>
-          <div class="color-hex">${layerColor.color.toUpperCase()}</div>
-          <input type="text" class="color-name-input" value="${layerColor.layerName}" data-node-id="${layerColor.nodeId}" data-role="${layerColor.role}" placeholder="Color name">
+          <span class="swatch" style="--sw:${layerColor.color}; background: var(--sw);"></span>
+          <span class="pill hex">${layerColor.color.toUpperCase()}</span>
+          <input class="input name" type="text" value="${layerColor.layerName}" data-node-id="${layerColor.nodeId}" data-role="${layerColor.role}" aria-label="Color role name" placeholder="Color name">
         `;
         
         // Handle name change
-        const nameInput = itemEl.querySelector('.color-name-input');
+        const nameInput = itemEl.querySelector('.name');
         nameInput.onchange = nameInput.onblur = (e) => {
           const newName = e.target.value.trim() || layerColor.layerName; // Fallback to original name
           const nodeId = e.target.getAttribute('data-node-id');
@@ -718,30 +1000,47 @@
       const allRoles = [...baseRoles, ...otherRoles];
       
       allRoles.forEach(role => {
-        const colorSection = document.createElement('div');
-        colorSection.className = 'apply-color-section';
+        const colorRow = document.createElement('div');
+        colorRow.className = 'row color-picker';
         
         // Use stored display name or fallback to role name
         const displayName = template.colorNames?.[role] || (role === 'Base' ? 'Base Color' : 'Role ' + role);
+        const currentColor = templateColors[role];
         
         const hasOriginalColors = template.originalColors && Object.keys(template.originalColors).length > 0;
         const statusText = role === 'Base' ? 'Primary color' : (hasOriginalColors ? 'Original color' : 'Default color');
         
-        colorSection.innerHTML = `
-          <div class="apply-color-label">${displayName}</div>
-          <input type="color" id="color-${role.toLowerCase()}" class="apply-color-input" value="${templateColors[role]}" data-role="${role}">
-          <div style="flex: 1; font-size: 11px; color: #666;">
-            ${statusText}
+        colorRow.innerHTML = `
+          <span class="swatch" style="--sw:${currentColor}; background: var(--sw);"></span>
+          <span class="pill hex" id="hex-${role.toLowerCase()}">${currentColor.toUpperCase()}</span>
+          <div class="color-name-display">
+            ${displayName}
+            <div class="status-text">${statusText}</div>
           </div>
+          <input type="color" id="color-${role.toLowerCase()}" class="color-picker-input" value="${currentColor}" data-role="${role}">
         `;
         
         // Add real-time change handler
-        const colorInput = colorSection.querySelector('.apply-color-input');
+        const colorInput = colorRow.querySelector('.color-picker-input');
         colorInput.addEventListener('input', (e) => {
-          handleColorChange(e.target.getAttribute('data-role'), e.target.value, template);
+          const newColor = e.target.value;
+          
+          // Update the hex pill
+          const hexPill = document.getElementById(`hex-${role.toLowerCase()}`);
+          if (hexPill) {
+            hexPill.textContent = newColor.toUpperCase();
+          }
+          
+          // Update the swatch
+          const swatch = colorRow.querySelector('.swatch');
+          if (swatch) {
+            swatch.style.setProperty('--sw', newColor);
+          }
+          
+          handleColorChange(role, newColor, template);
         });
         
-        container.appendChild(colorSection);
+        container.appendChild(colorRow);
       });
       
       section.style.display = 'block';
@@ -829,20 +1128,32 @@
           if (input) {
             input.value = shiftedColor;
           }
+          
+          // Update the hex pill
+          const hexPill = document.getElementById(`hex-${role.toLowerCase()}`);
+          if (hexPill) {
+            hexPill.textContent = shiftedColor.toUpperCase();
+          }
+          
+          // Update the swatch
+          const swatch = input.closest('.row').querySelector('.swatch');
+          if (swatch) {
+            swatch.style.setProperty('--sw', shiftedColor);
+          }
         }
       });
       
       // Update status texts
       Object.keys(templateColors).forEach(role => {
-        const roleElement = document.getElementById(`color-${role.toLowerCase()}`).parentElement;
-        const statusElement = roleElement.querySelector('div:last-child');
+        const roleElement = document.getElementById(`color-${role.toLowerCase()}`).closest('.row');
+        const statusElement = roleElement.querySelector('.status-text');
         if (statusElement) {
           if (role === changedRole) {
             statusElement.textContent = 'Anchor (changed)';
-            statusElement.style.color = '#007ACC';
+            statusElement.style.color = 'var(--brand-600)';
           } else {
             statusElement.textContent = 'Shifted equally';
-            statusElement.style.color = '#666';
+            statusElement.style.color = 'var(--muted)';
           }
         }
       });
@@ -1040,10 +1351,10 @@
 
       row.innerHTML = `
         <div class="variant-number">${variantId}</div>
-        <select class="variant-anchor-dropdown">
+        <select class="variant-anchor-dropdown input">
           ${colorOptions}
         </select>
-        <input type="text" class="variant-color-input" placeholder="#ff0000" maxlength="7">
+        <input type="text" class="variant-color-input input" placeholder="#ff0000" maxlength="7">
         <button class="remove-variant-btn" data-variant-id="${variantId}" title="Remove variant">×</button>
       `;
       
@@ -1118,6 +1429,9 @@
         case 'selection-analyzed':
           displayAnalysisResults(data.layerColors);
           showStatus(`Found ${data.layerColors.length} colors in selection`);
+          break;
+        case 'template-created':
+          showStatus('Template saved successfully! 🎨', 'success');
           break;
         case 'templates-updated':
           updateTemplateList(data.templates);
