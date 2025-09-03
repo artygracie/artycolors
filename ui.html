@@ -308,6 +308,63 @@
       border-radius: 4px !important;
       cursor: pointer !important;
     }
+    
+    .variant-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      padding: 8px;
+      background: #f8f9fa;
+      border-radius: 4px;
+      border: 1px solid #e0e0e0;
+    }
+    
+    .variant-number {
+      font-size: 11px;
+      font-weight: 600;
+      color: #666;
+      min-width: 20px;
+      text-align: center;
+    }
+    
+    .variant-anchor-dropdown {
+      flex: 1;
+      padding: 4px 6px;
+      border: 1px solid #d0d0d0;
+      border-radius: 3px;
+      font-size: 11px;
+      background: white;
+      cursor: pointer;
+      min-width: 90px;
+    }
+    
+    .variant-color-input {
+      width: 70px;
+      padding: 2px 4px;
+      border: 1px solid #d0d0d0;
+      border-radius: 3px;
+      font-size: 10px;
+      font-family: monospace;
+    }
+    
+    .remove-variant-btn {
+      background: #ff4757;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      font-size: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .remove-variant-btn:hover {
+      background: #ff3742;
+    }
   </style>
 </head>
 <body>
@@ -374,6 +431,23 @@
 
     <div class="section">
       <button class="primary-button" id="apply-template" disabled>Apply to Selection</button>
+    </div>
+
+    <div class="section" id="batch-section" style="display: none;">
+      <h3>Batch Generation</h3>
+      <div class="workflow-step">
+        Create multiple variants by changing different colors
+      </div>
+      
+      <div class="input-group">
+        <label>Variants to Generate</label>
+        <div id="variant-list">
+          <!-- Variant rows will be populated here -->
+        </div>
+        <button class="secondary-button" id="add-variant" style="margin-top: 8px;">+ Add Variant</button>
+      </div>
+      
+      <button class="primary-button" id="batch-generate" disabled>Generate Variants</button>
     </div>
   </div>
 
@@ -458,7 +532,40 @@
         selectTemplate(templateId);
       } else {
         hideColorPickers();
+        hideBatchSection();
       }
+    };
+
+    // Add variant button
+    document.getElementById('add-variant').onclick = () => {
+      addVariantRow();
+    };
+
+    // Batch generation
+    document.getElementById('batch-generate').onclick = () => {
+      if (!selectedTemplateId) {
+        showStatus('Please select a template', 'error');
+        return;
+      }
+
+      const variants = collectVariantData();
+      
+      if (variants.length === 0) {
+        showStatus('Please add at least one variant', 'error');
+        return;
+      }
+
+      // Validate all variants have valid hex colors
+      const invalidVariants = variants.filter(v => !v.hexColor.match(/^#[0-9a-fA-F]{6}$/));
+      if (invalidVariants.length > 0) {
+        showStatus('Please provide valid hex colors for all variants', 'error');
+        return;
+      }
+
+      postMessage('batch-generate', { 
+        templateId: selectedTemplateId, 
+        variants
+      });
     };
 
 
@@ -562,6 +669,7 @@
       selectedTemplateId = id;
       updateTemplateList(templates);
       showColorPickers(templates[id]);
+      showBatchSection();
     }
 
     function showColorPickers(template) {
@@ -880,6 +988,115 @@
       };
       
       return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+    }
+
+    let variantCounter = 0;
+    let availableAnchorColors = [];
+
+    function showBatchSection() {
+      if (selectedTemplateId) {
+        document.getElementById('batch-section').style.display = 'block';
+        initializeBatchSection();
+        updateBatchButton();
+      }
+    }
+
+    function hideBatchSection() {
+      document.getElementById('batch-section').style.display = 'none';
+      clearVariantList();
+    }
+
+    function initializeBatchSection() {
+      const template = templates[selectedTemplateId];
+      if (!template) return;
+
+      // Get available anchor colors from template
+      availableAnchorColors = Object.keys(template.originalColors || {});
+      
+      // Clear existing variants and add one default variant
+      clearVariantList();
+      addVariantRow();
+    }
+
+    function clearVariantList() {
+      document.getElementById('variant-list').innerHTML = '';
+      variantCounter = 0;
+    }
+
+    function addVariantRow() {
+      const container = document.getElementById('variant-list');
+      const variantId = ++variantCounter;
+      
+      const row = document.createElement('div');
+      row.className = 'variant-row';
+      row.dataset.variantId = variantId;
+      
+      // Get template color names for dropdown options
+      const template = templates[selectedTemplateId];
+      const colorOptions = availableAnchorColors.map(role => {
+        const displayName = template?.colorNames?.[role] || role;
+        return `<option value="${role}">${displayName}</option>`;
+      }).join('');
+
+      row.innerHTML = `
+        <div class="variant-number">${variantId}</div>
+        <select class="variant-anchor-dropdown">
+          ${colorOptions}
+        </select>
+        <input type="text" class="variant-color-input" placeholder="#ff0000" maxlength="7">
+        <button class="remove-variant-btn" data-variant-id="${variantId}" title="Remove variant">×</button>
+      `;
+      
+      container.appendChild(row);
+      
+      // Add remove button event listener
+      const removeBtn = row.querySelector('.remove-variant-btn');
+      removeBtn.onclick = () => removeVariantRow(variantId);
+      
+      // Add input change listeners to update button state
+      const colorInput = row.querySelector('.variant-color-input');
+      const anchorSelect = row.querySelector('.variant-anchor-dropdown');
+      
+      colorInput.addEventListener('input', updateBatchButton);
+      anchorSelect.addEventListener('change', updateBatchButton);
+      
+      updateBatchButton();
+    }
+
+    function removeVariantRow(variantId) {
+      const row = document.querySelector(`[data-variant-id="${variantId}"]`);
+      if (row) {
+        row.remove();
+        updateBatchButton();
+      }
+    }
+
+    function collectVariantData() {
+      const rows = document.querySelectorAll('.variant-row');
+      const variants = [];
+      
+      rows.forEach((row, index) => {
+        const name = `${index + 1}`; // Auto-number as 1, 2, 3, etc.
+        const anchorColor = row.querySelector('.variant-anchor-dropdown').value;
+        let hexColor = row.querySelector('.variant-color-input').value.trim();
+        
+        // Auto-add # if missing
+        if (hexColor && !hexColor.startsWith('#') && hexColor.match(/^[0-9a-fA-F]{6}$/)) {
+          hexColor = '#' + hexColor;
+        }
+        
+        if (anchorColor && hexColor && hexColor.match(/^#[0-9a-fA-F]{6}$/)) {
+          variants.push({ name, anchorColor, hexColor });
+        }
+      });
+      
+      return variants;
+    }
+
+    function updateBatchButton() {
+      const button = document.getElementById('batch-generate');
+      const variants = collectVariantData();
+      button.disabled = !selectedTemplateId || variants.length === 0;
     }
 
     function hideColorPickers() {

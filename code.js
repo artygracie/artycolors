@@ -326,7 +326,7 @@ figma.ui.onmessage = async (msg) => {
                 await handleApplyTemplate(msg.templateId, msg.colorChanges);
                 break;
             case MessageType.BATCH_GENERATE:
-                await handleBatchGenerate(msg.templateId, msg.baseColors, msg.columns, msg.gap);
+                await handleBatchGenerate(msg.templateId, msg.variants);
                 break;
             case MessageType.GET_TEMPLATES:
                 await handleGetTemplates();
@@ -422,9 +422,37 @@ async function handleApplyTemplate(templateId, colorChanges) {
     }
     figma.notify('Template applied successfully');
 }
-async function handleBatchGenerate(templateId, baseColors, columns, gap) {
-    // Implementation for batch generation will be added in Phase 5
-    figma.notify('Batch generation coming soon!');
+async function handleBatchGenerate(templateId, variants) {
+    const template = await getTemplate(templateId);
+    if (!template) {
+        figma.notify('Template not found');
+        return;
+    }
+    const selection = figma.currentPage.selection;
+    if (selection.length === 0) {
+        figma.notify('Please select a component to duplicate');
+        return;
+    }
+    if (variants.length === 0) {
+        figma.notify('Please add variants to generate');
+        return;
+    }
+    const sourceComponent = selection[0];
+    // Create grid of duplicates with auto-calculated layout
+    const duplicates = duplicateInGrid(sourceComponent, variants.length);
+    // Apply template with different anchor colors to each duplicate
+    for (let i = 0; i < duplicates.length && i < variants.length; i++) {
+        const duplicate = duplicates[i];
+        const variant = variants[i];
+        // Apply template using anchor-based system
+        applyTemplateToRootWithAnchor(duplicate, template, variant.anchorColor, variant.hexColor);
+        // Set the component name to the variant name
+        duplicate.name = variant.name;
+    }
+    // Select all the new components
+    figma.currentPage.selection = duplicates;
+    figma.viewport.scrollAndZoomIntoView(duplicates);
+    figma.notify(`Generated ${duplicates.length} variants in auto-grid layout`);
 }
 async function handleGetTemplates() {
     const templates = await getAllTemplates();
@@ -442,6 +470,99 @@ function rgbToHex(color) {
 }
 function generateId() {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
+}
+/**
+ * Duplicate a node in an automatically calculated grid layout
+ * @param node - The node to duplicate
+ * @param count - Total number of copies to create
+ * @param columns - Number of columns (optional, will auto-calculate if not provided)
+ * @param gap - Gap between items in pixels (optional, defaults to 50)
+ * @returns Array of duplicated nodes
+ */
+function duplicateInGrid(node, count, columns, gap = 50) {
+    const duplicates = [];
+    // Auto-calculate optimal columns if not provided
+    if (!columns) {
+        if (count <= 2)
+            columns = 2;
+        else if (count <= 4)
+            columns = 2;
+        else if (count <= 9)
+            columns = 3;
+        else
+            columns = 4; // Max 4 columns for readability
+    }
+    // Get node dimensions for positioning
+    const nodeWidth = 'width' in node ? node.width : 100;
+    const nodeHeight = 'height' in node ? node.height : 100;
+    // Calculate grid positions
+    for (let i = 0; i < count; i++) {
+        const clone = node.clone();
+        // Calculate grid position
+        const row = Math.floor(i / columns);
+        const col = i % columns;
+        // Position the clone
+        const x = node.x + col * (nodeWidth + gap);
+        const y = node.y + row * (nodeHeight + gap);
+        clone.x = x;
+        clone.y = y;
+        // Add to current page
+        figma.currentPage.appendChild(clone);
+        duplicates.push(clone);
+    }
+    return duplicates;
+}
+/**
+ * Apply template to a component using anchor-based color changes
+ * Similar to the frontend logic but using backend OKLCH calculations
+ */
+function applyTemplateToRootWithAnchor(root, template, anchorRole, newAnchorColor) {
+    const roleIndex = indexRoles(root);
+    const originalAnchorColor = template.originalColors[anchorRole];
+    if (!originalAnchorColor) {
+        console.warn('No original color found for anchor role:', anchorRole);
+        return;
+    }
+    // Calculate color shift in OKLCH space
+    const originalOKLCH = hexToOKLCH(originalAnchorColor);
+    const newOKLCH = hexToOKLCH(newAnchorColor);
+    const shift = {
+        L: newOKLCH.L - originalOKLCH.L,
+        C: newOKLCH.C - originalOKLCH.C,
+        H: newOKLCH.H - originalOKLCH.H
+    };
+    // Handle hue wraparound
+    if (shift.H > 180)
+        shift.H -= 360;
+    if (shift.H < -180)
+        shift.H += 360;
+    // Apply shift to all colors in the template
+    Object.entries(template.originalColors).forEach(([role, originalColor]) => {
+        let finalColor;
+        if (role === anchorRole) {
+            // Use the exact anchor color
+            finalColor = newAnchorColor;
+        }
+        else {
+            // Apply proportional shift to this color
+            const originalRoleOKLCH = hexToOKLCH(originalColor);
+            const shiftedOKLCH = {
+                L: Math.max(0, Math.min(1, originalRoleOKLCH.L + shift.L)),
+                C: Math.max(0, originalRoleOKLCH.C + shift.C),
+                H: (originalRoleOKLCH.H + shift.H + 360) % 360
+            };
+            finalColor = oklchToHex(gamutClamp(shiftedOKLCH));
+        }
+        // Apply color to nodes with this role
+        const nodes = roleIndex[role] || [];
+        for (const node of nodes) {
+            applyColorToNode(node, finalColor);
+        }
+    });
+    // Store template reference
+    root.setPluginData('templateId', template.id);
+    root.setPluginData('anchorColor', anchorRole);
+    root.setPluginData('anchorValue', newAnchorColor);
 }
 function applyTemplateToRoot(root, template, baseHex) {
     const roleIndex = indexRoles(root);
